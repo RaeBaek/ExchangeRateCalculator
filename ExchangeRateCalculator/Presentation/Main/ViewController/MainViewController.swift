@@ -40,15 +40,21 @@ final class MainViewController: UIViewController {
     }
     
     private func bind() {
-        let input = MainViewModel.Input(viewDidLoad: Observable.just(()), refreshTrigger: Observable.just(()))
+        let input = MainViewModel.Input(viewDidLoad: Observable.just(()),
+                                        refreshTrigger: Observable.just(()),
+                                        searchText: mainView.countrySearchBar.rx.text.orEmpty)
         let output = mainViewModel.transform(input: input)
         
-        output.rates
-            .asDriver(onErrorDriveWith: .empty())
-            .map { $0.rates.sorted { $0.key < $1.key }}
-            .drive(mainView.tableView.rx.items(cellIdentifier: MainTableViewCell.identifier, cellType: MainTableViewCell.self)) { _, item, cell in
-                cell.setCell(item.key, item.value)
+        output.filteredRates
+            .bind(to: mainView.tableView.rx.items(cellIdentifier: MainTableViewCell.identifier, cellType: MainTableViewCell.self)) { _, item, cell in
+                cell.setCell(item)
             }
+            .disposed(by: disposeBag)
+        
+        output.filteredRates
+            .map { $0.isEmpty == false }
+            .observe(on: MainScheduler.instance)
+            .bind(to: mainView.emptyView.rx.isHidden)
             .disposed(by: disposeBag)
         
         output.errorMessage

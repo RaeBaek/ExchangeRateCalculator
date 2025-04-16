@@ -15,10 +15,11 @@ final class MainViewModel {
     struct Input {
         let viewDidLoad: Observable<Void>
         let refreshTrigger: Observable<Void>
+        let searchText: ControlProperty<String>
     }
     
     struct Output {
-        let rates: PublishRelay<ExchageRateResponseDTO>
+        let filteredRates: PublishRelay<[CurrencyCellModel]>
         let errorMessage: PublishRelay<String>
     }
     
@@ -30,8 +31,9 @@ final class MainViewModel {
     }
     
     func transform(input: Input) -> Output {
-        let rates = PublishRelay<ExchageRateResponseDTO>()
+        let rates = PublishRelay<ExchangeRate>()
         let errorMessage = PublishRelay<String>()
+        let filterdRates = PublishRelay<[CurrencyCellModel]>()
         
         let trigger = Observable.merge(input.viewDidLoad,
                                        input.refreshTrigger)
@@ -45,10 +47,24 @@ final class MainViewModel {
                         return .empty()
                     }
             }
+            .map { $0.toDomain() }
             .bind(to: rates)
             .disposed(by: disposeBag)
         
-        return Output(rates: rates,
+        Observable.combineLatest(rates.compactMap { $0 }, input.searchText)
+            .map { exchangeRate, query -> [CurrencyCellModel] in
+                let all = exchangeRate.rates.map { (key, value) in
+                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value))
+                }
+                
+                let lowercased = query.lowercased()
+                let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
+                return filtered.sorted { $0.code < $1.code }
+            }
+            .bind(to: filterdRates)
+            .disposed(by: disposeBag)
+        
+        return Output(filteredRates: filterdRates,
                       errorMessage: errorMessage)
     }
 }

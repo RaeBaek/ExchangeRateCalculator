@@ -23,6 +23,14 @@ final class MainView: UIView {
         $0.rowHeight = 60
     }
     
+    let emptyView = UILabel().then {
+        $0.text = "검색 결과 없음"
+        $0.textAlignment = .center
+        $0.textColor = .systemGray
+        $0.font = .systemFont(ofSize: 17, weight: .regular)
+        $0.isHidden = true
+    }
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         
@@ -40,6 +48,8 @@ final class MainView: UIView {
         [countrySearchBar, tableView].forEach {
             self.addSubview($0)
         }
+        
+        self.tableView.addSubview(emptyView)
     }
     
     private func setConstraints() {
@@ -52,6 +62,10 @@ final class MainView: UIView {
             $0.top.equalTo(countrySearchBar.snp.bottom)
             $0.horizontalEdges.equalToSuperview()
             $0.bottom.equalTo(safeAreaLayoutGuide)
+        }
+        
+        emptyView.snp.makeConstraints {
+            $0.center.equalToSuperview()
         }
     }
 }

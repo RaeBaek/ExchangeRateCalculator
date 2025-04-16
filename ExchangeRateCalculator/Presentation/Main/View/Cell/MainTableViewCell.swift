@@ -68,10 +68,10 @@ final class MainTableViewCell: UITableViewCell {
         }
     }
     
-    func setCell(_ key: String, _ value: Double) {
-        countryCodeLabel.text = key
-        countryNameLabel.text = CountryName.name[key]
-        exchangeRateLabel.text = String(format: "%.4f", value)
+    func setCell(_ item: CurrencyCellModel) {
+        countryCodeLabel.text = item.code
+        countryNameLabel.text = item.name
+        exchangeRateLabel.text = item.rate
     }
     
 }
