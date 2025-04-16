@@ -76,6 +76,11 @@ final class ExchangeRateView: UIView {
         convertButton.clipsToBounds = true
     }
     
+    func setView(_ model: CurrencyCellModel) {
+        currencyLabel.text = model.code
+        countryLabel.text = model.name
+    }
+    
     private func configureView() {
         self.backgroundColor = .systemBackground
         

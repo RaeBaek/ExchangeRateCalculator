@@ -66,7 +66,13 @@ final class MainViewController: UIViewController {
         
         mainView.tableView.rx.itemSelected
             .bind(with: self) { owner, indexPath in
-                owner.navigationController?.pushViewController(ExchageRateCalculatorViewController(), animated: true)
+                
+            }
+            .disposed(by: disposeBag)
+        
+        mainView.tableView.rx.modelSelected(CurrencyCellModel.self)
+            .bind(with: self) { owner, model in
+                owner.navigationController?.pushViewController(ExchageRateCalculatorViewController(currencyModel: model), animated: true)
             }
             .disposed(by: disposeBag)
     }
