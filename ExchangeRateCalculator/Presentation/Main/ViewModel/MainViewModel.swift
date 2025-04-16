@@ -23,11 +23,11 @@ final class MainViewModel {
         let errorMessage: PublishRelay<String>
     }
     
-    private let exchageRateService: ExchangeRateAPIService
+    private let useCase: ExchangeRateUseCaseInterface
     private let disposeBag = DisposeBag()
     
-    init(exchageRateService: ExchangeRateAPIService = ExchangeRateAPIService()) {
-        self.exchageRateService = exchageRateService
+    init(useCase: ExchangeRateUseCaseInterface) {
+        self.useCase = useCase
     }
     
     func transform(input: Input) -> Output {
@@ -41,7 +41,7 @@ final class MainViewModel {
         trigger
             .withUnretained(self)
             .flatMapLatest { owner, _ in
-                owner.exchageRateService.rxFetchExchageRates()
+                owner.useCase.rxFetchExchangeRateData()
                     .catch { error in
                         errorMessage.accept(error.localizedDescription)
                         return .empty()

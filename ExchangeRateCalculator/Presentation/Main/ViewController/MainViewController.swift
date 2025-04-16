@@ -19,8 +19,8 @@ final class MainViewController: UIViewController {
     
     private let disposeBag = DisposeBag()
     
-    init(mainViewModel: MainViewModel = MainViewModel()) {
-        self.mainViewModel = mainViewModel
+    init(DIContainer: MainDIContainerInterface) {
+        self.mainViewModel = DIContainer.makeMainViewModel()
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -35,7 +35,7 @@ final class MainViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setUpTableView()
+        setNavigationBar()
         bind()
     }
     
@@ -63,15 +63,18 @@ final class MainViewController: UIViewController {
                 
             }
             .disposed(by: disposeBag)
-    }
-    
-    private func setUpTableView() {
-        mainView.tableView.rx.setDelegate(self)
+        
+        mainView.tableView.rx.itemSelected
+            .bind(with: self) { owner, indexPath in
+                owner.navigationController?.pushViewController(ExchageRateCalculatorViewController(), animated: true)
+            }
             .disposed(by: disposeBag)
     }
-
-}
-
-extension MainViewController: UITableViewDelegate {
     
+    private func setNavigationBar() {
+        self.navigationItem.title = "환율 정보"
+        self.navigationController?.navigationBar.prefersLargeTitles = true
+        self.navigationItem.largeTitleDisplayMode = .always
+    }
+
 }
