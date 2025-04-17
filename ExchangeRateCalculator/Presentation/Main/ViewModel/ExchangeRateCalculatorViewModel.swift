@@ -15,24 +15,33 @@ final class ExchangeRateCalculatorViewModel {
     struct Input {
         let currencyModel: BehaviorSubject<CurrencyCellModel>
         let currencyValue: ControlProperty<String>
+        let convertButtonTapped: ControlEvent<Void>
     }
     
     struct Output {
+        let convertError: PublishRelay<Void>
         let exchageValue: PublishRelay<String>
     }
     
     private let disposeBag = DisposeBag()
     
     func transform(input: Input) -> Output {
+        let convertError = PublishRelay<Void>()
         let exchangeValue = PublishRelay<String>()
         
-        Observable.combineLatest(input.currencyModel, input.currencyValue)
-            .map { (currencyModel, currencyValue) in
-                return String((Double(currencyModel.rate) ?? 0) * (Double(currencyValue) ?? 0))
+        input.convertButtonTapped
+            .withLatestFrom(Observable.combineLatest(input.currencyModel, input.currencyValue))
+            .map { model, value -> String in
+                guard let rate = Double(model.rate), let value = Double(value) else {
+                    convertError.accept(())
+                    return "계산 결과가 이곳에 표시됩니다." }
+                
+                return "\(String(format: "%.2f", value)) \(Currency.current) -> \(String(format: "%.2f", rate * value)) \(model.code)"
             }
             .bind(to: exchangeValue)
             .disposed(by: disposeBag)
         
-        return Output(exchageValue: exchangeValue)
+        return Output(convertError: convertError,
+                      exchageValue: exchangeValue)
     }
 }

@@ -12,7 +12,7 @@ import Then
 import RxSwift
 import RxCocoa
 
-final class MainViewController: UIViewController {
+final class MainViewController: BaseViewController {
 
     private let mainView = MainView()
     private let mainViewModel: MainViewModel
@@ -35,11 +35,14 @@ final class MainViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        setNavigationBar()
+        
+        setNavigationBar(NavigationBarTitle.mainView.rawValue)
         bind()
     }
     
-    private func bind() {
+    override func bind() {
+        super.bind()
+        
         let input = MainViewModel.Input(viewDidLoad: Observable.just(()),
                                         refreshTrigger: Observable.just(()),
                                         searchText: mainView.countrySearchBar.rx.text.orEmpty)
@@ -76,11 +79,4 @@ final class MainViewController: UIViewController {
             }
             .disposed(by: disposeBag)
     }
-    
-    private func setNavigationBar() {
-        self.navigationItem.title = "환율 정보"
-        self.navigationController?.navigationBar.prefersLargeTitles = true
-        self.navigationItem.largeTitleDisplayMode = .always
-    }
-
 }

@@ -7,14 +7,12 @@
 
 import UIKit
 
-import SnapKit
-
 import Then
 
 import RxSwift
 import RxCocoa
 
-final class ExchageRateCalculatorViewController: UIViewController {
+final class ExchageRateCalculatorViewController: BaseViewController {
     
     private let exchangeRateView = ExchangeRateView()
     
@@ -40,26 +38,29 @@ final class ExchageRateCalculatorViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        setNavigationBar()
+        setNavigationBar(NavigationBarTitle.exchangeRate.rawValue)
         exchangeRateView.setView(currencyModel)
         
         bind()
     }
     
-    private func bind() {
+    override func bind() {
+        super.bind()
+        
         let input = ExchangeRateCalculatorViewModel.Input(currencyModel: BehaviorSubject(value: currencyModel),
-                                                          currencyValue: exchangeRateView.amountTextField.rx.text.orEmpty)
+                                                          currencyValue: exchangeRateView.amountTextField.rx.text.orEmpty,
+                                                          convertButtonTapped: exchangeRateView.convertButton.rx.tap)
         let output = viewModel.transform(input: input)
         
         output.exchageValue
             .bind(to: exchangeRateView.resultLabel.rx.text)
             .disposed(by: disposeBag)
-    }
-    
-    private func setNavigationBar() {
-        self.navigationItem.title = "환율 계산기"
-        self.navigationController?.navigationBar.prefersLargeTitles = true
-        self.navigationItem.largeTitleDisplayMode = .always
+        
+        output.convertError
+            .bind(with: self) { owner, _ in
+                owner.showAlert()
+            }
+            .disposed(by: disposeBag)
     }
     
 }

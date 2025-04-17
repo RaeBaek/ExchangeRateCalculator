@@ -11,7 +11,7 @@ import SnapKit
 
 import Then
 
-final class MainView: UIView {
+final class MainView: BaseView {
     
     let countrySearchBar = UISearchBar().then {
         $0.placeholder = "통화 검색"
@@ -33,17 +33,14 @@ final class MainView: UIView {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
-        configureView()
-        setConstraints()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func configureView() {
-        self.backgroundColor = .systemBackground
+    override func configureView() {
+        super.configureView()
         
         [countrySearchBar, tableView].forEach {
             self.addSubview($0)
@@ -52,7 +49,9 @@ final class MainView: UIView {
         self.tableView.addSubview(emptyView)
     }
     
-    private func setConstraints() {
+    override func setConstraints() {
+        super.setConstraints()
+        
         countrySearchBar.snp.makeConstraints {
             $0.top.equalTo(safeAreaLayoutGuide)
             $0.horizontalEdges.equalToSuperview()

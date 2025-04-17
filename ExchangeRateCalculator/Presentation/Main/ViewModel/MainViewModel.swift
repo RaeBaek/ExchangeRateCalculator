@@ -51,7 +51,7 @@ final class MainViewModel {
             .bind(to: rates)
             .disposed(by: disposeBag)
         
-        Observable.combineLatest(rates.compactMap { $0 }, input.searchText)
+        Observable.combineLatest(rates.map { $0 }, input.searchText)
             .map { exchangeRate, query -> [CurrencyCellModel] in
                 let all = exchangeRate.rates.map { (key, value) in
                     CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value))

@@ -11,7 +11,7 @@ import SnapKit
 
 import Then
 
-final class ExchangeRateView: UIView {
+final class ExchangeRateView: BaseView {
     
     let labelStackView = UIStackView().then {
         $0.axis = .vertical
@@ -54,10 +54,6 @@ final class ExchangeRateView: UIView {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
-        configureView()
-        setConstraints()
-        
     }
     
     required init?(coder: NSCoder) {
@@ -81,8 +77,8 @@ final class ExchangeRateView: UIView {
         countryLabel.text = model.name
     }
     
-    private func configureView() {
-        self.backgroundColor = .systemBackground
+    override func configureView() {
+        super.configureView()
         
         [labelStackView, amountTextField, convertButton, resultLabel].forEach {
             self.addSubview($0)
@@ -93,7 +89,9 @@ final class ExchangeRateView: UIView {
         }
     }
     
-    private func setConstraints() {
+    override func setConstraints() {
+        super.setConstraints()
+        
         labelStackView.snp.makeConstraints {
             $0.top.equalTo(safeAreaLayoutGuide).offset(32)
             $0.centerX.equalToSuperview()
