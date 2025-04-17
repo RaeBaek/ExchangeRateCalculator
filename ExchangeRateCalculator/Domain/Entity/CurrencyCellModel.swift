@@ -11,4 +11,5 @@ struct CurrencyCellModel {
     let code: String
     let name: String
     let rate: String
+    let isBookmarked: Bool
 }

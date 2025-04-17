@@ -5,7 +5,8 @@
 //  Created by 백래훈 on 4/15/25.
 //
 
-import Foundation
+import UIKit
+import CoreData
 
 import RxSwift
 import RxCocoa
@@ -16,6 +17,7 @@ final class MainViewModel {
         let viewDidLoad: Observable<Void>
         let refreshTrigger: Observable<Void>
         let searchText: ControlProperty<String>
+        let bookmarkButtonTapped: PublishRelay<IndexPath>
     }
     
     struct Output {
@@ -23,17 +25,24 @@ final class MainViewModel {
         let errorMessage: PublishRelay<String>
     }
     
+    private var container: NSPersistentContainer!
+    
     private let useCase: ExchangeRateUseCaseInterface
     private let disposeBag = DisposeBag()
     
     init(useCase: ExchangeRateUseCaseInterface) {
         self.useCase = useCase
+        
+        let appDelegate = UIApplication.shared.delegate as! AppDelegate
+        self.container = appDelegate.persistentContainer
     }
     
     func transform(input: Input) -> Output {
         let rates = PublishRelay<ExchangeRate>()
         let errorMessage = PublishRelay<String>()
         let filterdRates = PublishRelay<[CurrencyCellModel]>()
+        
+        var bookmarkedCodes = Set<String>()
         
         let trigger = Observable.merge(input.viewDidLoad,
                                        input.refreshTrigger)
@@ -54,7 +63,7 @@ final class MainViewModel {
         Observable.combineLatest(rates.map { $0 }, input.searchText)
             .map { exchangeRate, query -> [CurrencyCellModel] in
                 let all = exchangeRate.rates.map { (key, value) in
-                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value))
+                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: <#Bool#>)
                 }
                 
                 let lowercased = query.lowercased()
@@ -64,7 +73,28 @@ final class MainViewModel {
             .bind(to: filterdRates)
             .disposed(by: disposeBag)
         
+        input.bookmarkButtonTapped
+            .bind { <#IndexPath#> in
+                <#code#>
+            }
+            .disposed(by: disposeBag)
+        
         return Output(filteredRates: filterdRates,
                       errorMessage: errorMessage)
+    }
+    
+    func createData(_ item: CurrencyCellModel) {
+        guard let entity = NSEntityDescription.entity(forEntityName: "Currency", in: self.container.viewContext) else { return }
+        let newCurrency = NSManagedObject(entity: entity, insertInto: self.container.viewContext)
+        newCurrency.setValue(item.code, forKey: "code")
+        newCurrency.setValue(item.name, forKey: "name")
+        newCurrency.setValue(item.rate, forKey: "rate")
+        
+        do {
+            try self.container.viewContext.save()
+            print("즐겨찾기 저장 성공!")
+        } catch {
+            print("즐겨찾기 저장 실패...")
+        }
     }
 }

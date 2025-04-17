@@ -17,6 +17,8 @@ final class MainViewController: BaseViewController {
     private let mainView = MainView()
     private let mainViewModel: MainViewModel
     
+    private let bookMarkButtonTapped = PublishRelay<IndexPath>()
+    
     private let disposeBag = DisposeBag()
     
     init(DIContainer: MainDIContainerInterface) {
@@ -45,12 +47,20 @@ final class MainViewController: BaseViewController {
         
         let input = MainViewModel.Input(viewDidLoad: Observable.just(()),
                                         refreshTrigger: Observable.just(()),
-                                        searchText: mainView.countrySearchBar.rx.text.orEmpty)
+                                        searchText: mainView.countrySearchBar.rx.text.orEmpty,
+                                        bookmarkButtonTapped: bookMarkButtonTapped)
         let output = mainViewModel.transform(input: input)
         
         output.filteredRates
-            .bind(to: mainView.tableView.rx.items(cellIdentifier: MainTableViewCell.identifier, cellType: MainTableViewCell.self)) { _, item, cell in
+            .bind(to: mainView.tableView.rx.items(cellIdentifier: MainTableViewCell.identifier, cellType: MainTableViewCell.self)) { row, item, cell in
                 cell.setCell(item)
+                
+                cell.bookMarkButtonTapped
+                    .map { IndexPath(row: row, section: 0) }
+                    .bind(with: self) { owner, indexPath in
+                        owner.bookMarkButtonTapped.accept(indexPath)
+                    }
+                    .disposed(by: cell.disposeBag)
             }
             .disposed(by: disposeBag)
         

@@ -11,6 +11,9 @@ import SnapKit
 
 import Then
 
+import RxSwift
+import RxCocoa
+
 final class MainTableViewCell: UITableViewCell {
     
     let labelStackView = UIStackView().then {
@@ -34,6 +37,19 @@ final class MainTableViewCell: UITableViewCell {
         $0.textAlignment = .right
     }
     
+    let bookmarkButton = UIButton().then {
+        $0.setImage(UIImage(systemName: "star"), for: .normal)
+        $0.setImage(UIImage(systemName: "star.fill"), for: .selected)
+        $0.setImage(UIImage(systemName: "star.fill"), for: .highlighted)
+        $0.tintColor = .systemYellow
+    }
+    
+    var bookMarkButtonTapped: ControlEvent<Void> {
+        return bookmarkButton.rx.tap
+    }
+    
+    let disposeBag = DisposeBag()
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         self.selectionStyle = .none
@@ -47,7 +63,7 @@ final class MainTableViewCell: UITableViewCell {
     }
     
     private func configureView() {
-        [labelStackView, exchangeRateLabel].forEach {
+        [labelStackView, bookmarkButton, exchangeRateLabel].forEach {
             contentView.addSubview($0)
         }
         
@@ -62,8 +78,14 @@ final class MainTableViewCell: UITableViewCell {
             $0.centerY.equalToSuperview()
         }
         
-        exchangeRateLabel.snp.makeConstraints {
+        bookmarkButton.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.size.equalTo(44)
+        }
+        
+        exchangeRateLabel.snp.makeConstraints {
+            $0.trailing.equalTo(bookmarkButton.snp.leading).offset(-16)
             $0.centerY.equalToSuperview()
             $0.leading.lessThanOrEqualTo(labelStackView.snp.trailing).offset(16)
             $0.width.equalTo(120)
