@@ -12,6 +12,6 @@ enum NavigationBarTitle: String {
     case exchangeRate = "환율 계산기"
 }
 
-enum Currency {
+enum CurrencyName {
     static let current = "USD"
 }

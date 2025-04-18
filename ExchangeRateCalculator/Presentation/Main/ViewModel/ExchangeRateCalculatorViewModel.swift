@@ -36,7 +36,7 @@ final class ExchangeRateCalculatorViewModel {
                     convertError.accept(())
                     return "계산 결과가 이곳에 표시됩니다." }
                 
-                return "\(String(format: "%.2f", value)) \(Currency.current) -> \(String(format: "%.2f", rate * value)) \(model.code)"
+                return "\(String(format: "%.2f", value)) \(CurrencyName.current) -> \(String(format: "%.2f", rate * value)) \(model.code)"
             }
             .bind(to: exchangeValue)
             .disposed(by: disposeBag)

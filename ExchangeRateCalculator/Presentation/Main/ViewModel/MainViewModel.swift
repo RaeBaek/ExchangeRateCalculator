@@ -27,6 +27,8 @@ final class MainViewModel {
     
     private var container: NSPersistentContainer!
     
+    private var bookMarkCodes = Set<String>()
+    
     private let useCase: ExchangeRateUseCaseInterface
     private let disposeBag = DisposeBag()
     
@@ -35,12 +37,21 @@ final class MainViewModel {
         
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         self.container = appDelegate.persistentContainer
+        
+        loadBookmarks()
+    }
+    
+    private func loadBookmarks() {
+        let request = Currency.fetchRequest()
+        if let results = try? container.viewContext.fetch(request) {
+            bookMarkCodes = Set(results.compactMap { $0.value(forKey: Currency.Key.code) as? String })
+        }
     }
     
     func transform(input: Input) -> Output {
         let rates = PublishRelay<ExchangeRate>()
         let errorMessage = PublishRelay<String>()
-        let filterdRates = PublishRelay<[CurrencyCellModel]>()
+        let filteredRates = PublishRelay<[CurrencyCellModel]>()
         
         var bookmarkedCodes = Set<String>()
         
@@ -63,38 +74,94 @@ final class MainViewModel {
         Observable.combineLatest(rates.map { $0 }, input.searchText)
             .map { exchangeRate, query -> [CurrencyCellModel] in
                 let all = exchangeRate.rates.map { (key, value) in
-                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: <#Bool#>)
+                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: bookmarkedCodes.contains(key))
                 }
                 
                 let lowercased = query.lowercased()
                 let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
-                return filtered.sorted { $0.code < $1.code }
+                
+                return filtered.sorted {
+                    if $0.isBookmarked != $1.isBookmarked {
+                        return $0.isBookmarked && $1.isBookmarked
+                    }
+                    return $0.code < $1.code
+                }
             }
-            .bind(to: filterdRates)
+            .bind(to: filteredRates)
             .disposed(by: disposeBag)
         
         input.bookmarkButtonTapped
-            .bind { <#IndexPath#> in
-                <#code#>
+            .withLatestFrom(filteredRates) { indexPath, models in
+                models[indexPath.row]
+            }
+            .subscribe(with: self) { owner, model in
+                if bookmarkedCodes.contains(model.code) {
+                    owner.deleteData(model)
+                    bookmarkedCodes.remove(model.code)
+                } else {
+                    owner.createData(model)
+                    bookmarkedCodes.insert(model.code)
+                }
+                
+                input.searchText
+                    .take(1)
+                    .withLatestFrom(rates) { text, rates in
+                        return (text, rates)
+                    }
+                    .subscribe { value in
+                        let all = value.1.rates.map { (key, value) in
+                            CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: bookmarkedCodes.contains(key))
+                        }
+                        
+                        let lowercased = value.0.lowercased()
+                        let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(value.0) }
+                        
+                        let sorted = filtered.sorted {
+                            if $0.isBookmarked != $1.isBookmarked {
+                                return $0.isBookmarked && $1.isBookmarked
+                            }
+                            return $0.code < $1.code
+                        }
+                        filteredRates.accept(sorted)
+                    }
+                    .disposed(by: owner.disposeBag)
             }
             .disposed(by: disposeBag)
         
-        return Output(filteredRates: filterdRates,
+        return Output(filteredRates: filteredRates,
                       errorMessage: errorMessage)
     }
     
     func createData(_ item: CurrencyCellModel) {
-        guard let entity = NSEntityDescription.entity(forEntityName: "Currency", in: self.container.viewContext) else { return }
+        guard let entity = NSEntityDescription.entity(forEntityName: Currency.className, in: self.container.viewContext) else { return }
         let newCurrency = NSManagedObject(entity: entity, insertInto: self.container.viewContext)
-        newCurrency.setValue(item.code, forKey: "code")
-        newCurrency.setValue(item.name, forKey: "name")
-        newCurrency.setValue(item.rate, forKey: "rate")
+        newCurrency.setValue(item.code, forKey: Currency.Key.code)
+        newCurrency.setValue(item.name, forKey: Currency.Key.name)
+        newCurrency.setValue(item.rate, forKey: Currency.Key.rate)
         
         do {
             try self.container.viewContext.save()
             print("즐겨찾기 저장 성공!")
         } catch {
             print("즐겨찾기 저장 실패...")
+        }
+    }
+    
+    func deleteData(_ item: CurrencyCellModel) {
+        let request = Currency.fetchRequest()
+        request.predicate = NSPredicate(format: "code == %@", item.code)
+        
+        do {
+            let results = try container.viewContext.fetch(request)
+            
+            for object in results {
+                container.viewContext.delete(object)
+            }
+            
+            try container.viewContext.save()
+            print("즐겨찾기 삭제 성공!")
+        } catch {
+            print("즐겨찾기 삭제 실패...")
         }
     }
 }
