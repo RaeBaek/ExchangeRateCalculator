@@ -18,7 +18,7 @@ extension Currency {
 
     @NSManaged public var code: String?
     @NSManaged public var name: String?
-    @NSManaged public var rate: Double
+    @NSManaged public var rate: String?
 
 }
 

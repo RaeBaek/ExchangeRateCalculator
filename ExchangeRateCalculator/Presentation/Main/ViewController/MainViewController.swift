@@ -46,7 +46,6 @@ final class MainViewController: BaseViewController {
         super.bind()
         
         let input = MainViewModel.Input(viewDidLoad: Observable.just(()),
-                                        refreshTrigger: Observable.just(()),
                                         searchText: mainView.countrySearchBar.rx.text.orEmpty,
                                         bookmarkButtonTapped: bookMarkButtonTapped)
         let output = mainViewModel.transform(input: input)

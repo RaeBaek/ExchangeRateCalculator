@@ -15,7 +15,6 @@ final class MainViewModel {
     
     struct Input {
         let viewDidLoad: Observable<Void>
-        let refreshTrigger: Observable<Void>
         let searchText: ControlProperty<String>
         let bookmarkButtonTapped: PublishRelay<IndexPath>
     }
@@ -38,9 +37,12 @@ final class MainViewModel {
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         self.container = appDelegate.persistentContainer
         
+        // 초기화 시 호출
         loadBookmarks()
+        readAllData()
     }
     
+    // CoreData에 저장되어 있는 즐겨찾기 내용을 bookMarkCodes에 대입
     private func loadBookmarks() {
         let request = Currency.fetchRequest()
         if let results = try? container.viewContext.fetch(request) {
@@ -53,12 +55,7 @@ final class MainViewModel {
         let errorMessage = PublishRelay<String>()
         let filteredRates = PublishRelay<[CurrencyCellModel]>()
         
-        var bookmarkedCodes = Set<String>()
-        
-        let trigger = Observable.merge(input.viewDidLoad,
-                                       input.refreshTrigger)
-        
-        trigger
+        input.viewDidLoad
             .withUnretained(self)
             .flatMapLatest { owner, _ in
                 owner.useCase.rxFetchExchangeRateData()
@@ -71,65 +68,68 @@ final class MainViewModel {
             .bind(to: rates)
             .disposed(by: disposeBag)
         
+        // 검색 필터링을 위한 Observable.combineLatest
         Observable.combineLatest(rates.map { $0 }, input.searchText)
-            .map { exchangeRate, query -> [CurrencyCellModel] in
+            .withUnretained(self)
+            .map { owner, value -> [CurrencyCellModel] in
+                let (exchangeRate, query) = value
                 let all = exchangeRate.rates.map { (key, value) in
-                    CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: bookmarkedCodes.contains(key))
+                    CurrencyCellModel(code: key,
+                                      name: CountryName.name[key] ?? "",
+                                      rate: String(format: "%.4f", value),
+                                      isBookmarked: owner.bookMarkCodes.contains(key))
                 }
                 
                 let lowercased = query.lowercased()
                 let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
                 
-                return filtered.sorted {
-                    if $0.isBookmarked != $1.isBookmarked {
-                        return $0.isBookmarked && $1.isBookmarked
-                    }
-                    return $0.code < $1.code
-                }
+                return owner.sortedModels(filtered)
             }
             .bind(to: filteredRates)
             .disposed(by: disposeBag)
         
+        // cell 내의 즐겨찾기 버튼의 이벤트 처리, withLatestFrom(filteredRates)
         input.bookmarkButtonTapped
             .withLatestFrom(filteredRates) { indexPath, models in
-                models[indexPath.row]
+                return (indexPath, models)
             }
-            .subscribe(with: self) { owner, model in
-                if bookmarkedCodes.contains(model.code) {
-                    owner.deleteData(model)
-                    bookmarkedCodes.remove(model.code)
+            .subscribe(with: self) { owner, pair in
+                let (indexPath, models) = pair
+                var updateModels = models
+                let tappedModel = models[indexPath.row]
+                
+                let updatedBookmark = !tappedModel.isBookmarked
+                let updateModel = CurrencyCellModel(code: tappedModel.code,
+                                                    name: tappedModel.name,
+                                                    rate: tappedModel.rate,
+                                                    isBookmarked: updatedBookmark)
+                
+                if updatedBookmark {
+                    owner.createData(updateModel)
+                    owner.bookMarkCodes.insert(updateModel.code)
                 } else {
-                    owner.createData(model)
-                    bookmarkedCodes.insert(model.code)
+                    owner.deleteData(updateModel)
+                    owner.bookMarkCodes.remove(updateModel.code)
                 }
                 
-                input.searchText
-                    .take(1)
-                    .withLatestFrom(rates) { text, rates in
-                        return (text, rates)
-                    }
-                    .subscribe { value in
-                        let all = value.1.rates.map { (key, value) in
-                            CurrencyCellModel(code: key, name: CountryName.name[key] ?? "", rate: String(format: "%.4f", value), isBookmarked: bookmarkedCodes.contains(key))
-                        }
-                        
-                        let lowercased = value.0.lowercased()
-                        let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(value.0) }
-                        
-                        let sorted = filtered.sorted {
-                            if $0.isBookmarked != $1.isBookmarked {
-                                return $0.isBookmarked && $1.isBookmarked
-                            }
-                            return $0.code < $1.code
-                        }
-                        filteredRates.accept(sorted)
-                    }
-                    .disposed(by: owner.disposeBag)
+                updateModels[indexPath.row] = updateModel
+                
+                let sorted = owner.sortedModels(updateModels)
+                filteredRates.accept(sorted)
             }
             .disposed(by: disposeBag)
         
         return Output(filteredRates: filteredRates,
                       errorMessage: errorMessage)
+    }
+    
+    private func sortedModels(_ items: [CurrencyCellModel]) -> [CurrencyCellModel] {
+        items.sorted {
+            if $0.isBookmarked != $1.isBookmarked {
+                return $0.isBookmarked && !$1.isBookmarked
+            }
+            return $0.code < $1.code
+        }
     }
     
     func createData(_ item: CurrencyCellModel) {
@@ -162,6 +162,22 @@ final class MainViewModel {
             print("즐겨찾기 삭제 성공!")
         } catch {
             print("즐겨찾기 삭제 실패...")
+        }
+    }
+    
+    func readAllData() {
+        do {
+            let currencies = try container.viewContext.fetch(Currency.fetchRequest())
+            
+            for currency in currencies as [NSManagedObject] {
+                if let code = currency.value(forKey: Currency.Key.code) as? String,
+                   let name = currency.value(forKey: Currency.Key.name) as? String,
+                   let rate = currency.value(forKey: Currency.Key.rate) as? String {
+                    print("code: \(code), name: \(name), rate: \(rate)")
+                }
+            }
+        } catch {
+            print("데이터 읽기 실패")
         }
     }
 }
