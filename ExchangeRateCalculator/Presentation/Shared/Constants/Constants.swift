@@ -15,3 +15,8 @@ enum NavigationBarTitle: String {
 enum CurrencyName {
     static let current = "USD"
 }
+
+enum CurrencyStatus {
+    case up
+    case down
+}

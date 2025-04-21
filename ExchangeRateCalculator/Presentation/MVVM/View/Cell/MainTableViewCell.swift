@@ -37,10 +37,7 @@ final class MainTableViewCell: UITableViewCell {
         $0.textAlignment = .right
     }
     
-    let upDownImage = UIImageView().then {
-        $0.image = UIImage(systemName: "equal.square.fill")
-        $0.tintColor = .systemGray
-    }
+    let upDownImage = UIImageView()
     
     let bookmarkButton = UIButton().then {
         let imageConfig = UIImage.SymbolConfiguration(pointSize: 14, weight: .regular)
@@ -123,6 +120,17 @@ final class MainTableViewCell: UITableViewCell {
         countryNameLabel.text = item.name
         exchangeRateLabel.text = item.rate
         bookmarkButton.isSelected = item.isBookmarked
+        
+        switch item.status {
+        case .up:
+            upDownImage.image = UIImage(systemName: "arrowtriangle.up.square.fill")
+            upDownImage.tintColor = .systemRed
+        case .down:
+            upDownImage.image = UIImage(systemName: "arrowtriangle.down.square.fill")
+            upDownImage.tintColor = .systemBlue
+        case .none:
+            upDownImage.image = nil
+        }
     }
     
 }

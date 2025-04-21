@@ -8,6 +8,7 @@
 import Foundation
 
 struct ExchangeRate {
+    let timeLastUpdateUtc: String
     let baseCode: String
     let rates: [String: Double]
 }

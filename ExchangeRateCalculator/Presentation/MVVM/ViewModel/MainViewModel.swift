@@ -37,16 +37,32 @@ final class MainViewModel {
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         self.container = appDelegate.persistentContainer
         
+//        let description = container.persistentStoreDescriptions.first
+//        description?.shouldMigrateStoreAutomatically = true
+//        description?.shouldInferMappingModelAutomatically = true
+//        
+//        container.loadPersistentStores { storeDesciption, error in
+//            if let error {
+//                fatalError("Unresolved Error: \(error)")
+//            }
+//        }
+        
         // 초기화 시 호출
         loadBookmarks()
         readAllData()
+        
     }
     
     // CoreData에 저장되어 있는 즐겨찾기 내용을 bookMarkCodes에 대입
     private func loadBookmarks() {
-        let request = Currency.fetchRequest()
-        if let results = try? container.viewContext.fetch(request) {
-            bookMarkCodes = Set(results.compactMap { $0.value(forKey: Currency.Key.code) as? String })
+        do {
+            let currencies = try container.viewContext.fetch(Currency.fetchRequest())
+            bookMarkCodes = Set(currencies.compactMap {
+                guard let isBookmarked = $0.value(forKey: Currency.Key.isBookmark) as? Bool, isBookmarked, let code = $0.value(forKey: Currency.Key.code) as? String else { return nil }
+                return code
+            })
+        } catch {
+            print("Load bookmarks error: \(error)")
         }
     }
     
@@ -65,6 +81,11 @@ final class MainViewModel {
                     }
             }
             .map { $0.toDomain() }
+            .withUnretained(self)
+            .do { owner, exchageRate in
+                owner.updateCurrencyDataIfNeeded(with: exchageRate)
+            }
+            .map { $0.1 }
             .bind(to: rates)
             .disposed(by: disposeBag)
         
@@ -73,17 +94,7 @@ final class MainViewModel {
             .withUnretained(self)
             .map { owner, value -> [CurrencyCellModel] in
                 let (exchangeRate, query) = value
-                let all = exchangeRate.rates.map { (key, value) in
-                    CurrencyCellModel(code: key,
-                                      name: CountryName.name[key] ?? "",
-                                      rate: String(format: "%.4f", value),
-                                      isBookmarked: owner.bookMarkCodes.contains(key))
-                }
-                
-                let lowercased = query.lowercased()
-                let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
-                
-                return owner.sortedModels(filtered)
+                return owner.makeCurrencyCellModels(from: exchangeRate.rates, query: query)
             }
             .bind(to: filteredRates)
             .disposed(by: disposeBag)
@@ -95,32 +106,69 @@ final class MainViewModel {
             }
             .subscribe(with: self) { owner, pair in
                 let (indexPath, models) = pair
-                var updateModels = models
-                let tappedModel = models[indexPath.row]
-                
-                let updatedBookmark = !tappedModel.isBookmarked
-                let updateModel = CurrencyCellModel(code: tappedModel.code,
-                                                    name: tappedModel.name,
-                                                    rate: tappedModel.rate,
-                                                    isBookmarked: updatedBookmark)
-                
-                if updatedBookmark {
-                    owner.createData(updateModel)
-                    owner.bookMarkCodes.insert(updateModel.code)
-                } else {
-                    owner.deleteData(updateModel)
-                    owner.bookMarkCodes.remove(updateModel.code)
-                }
-                
-                updateModels[indexPath.row] = updateModel
-                
-                let sorted = owner.sortedModels(updateModels)
-                filteredRates.accept(sorted)
+                filteredRates.accept(owner.handleBookmarkToggle(at: indexPath, in: models))
             }
             .disposed(by: disposeBag)
         
         return Output(filteredRates: filteredRates,
                       errorMessage: errorMessage)
+    }
+    
+    private func updateCurrencyDataIfNeeded(with exchangeRate: ExchangeRate) {
+        let todayDateString = exchangeRate.timeLastUpdateUtc.toDateOnlyString()
+        let request = Currency.fetchRequest()
+        
+        do {
+            let savedCurrencies = try container.viewContext.fetch(request)
+            
+            for (code, rate) in exchangeRate.rates {
+                let name = CountryName.name[code]
+                
+                // 이미 저장된 경우
+                if let existing = savedCurrencies.first(where: { $0.value(forKey: Currency.Key.code) as? String == code }) {
+                    let oldRateString = existing.value(forKey: Currency.Key.rate) as? String ?? "0"
+                    
+                    // API가 오늘 날짜로 새로 업데이트 됐지만 아직 앱에 반영이 안됐다면
+                    if existing.lastUpdatedDate != todayDateString {
+                        existing.setValue(oldRateString, forKey: Currency.Key.yesterday)
+                        existing.setValue(String(format: "%.4f", rate), forKey: Currency.Key.rate)
+                        existing.setValue(todayDateString, forKey: Currency.Key.lastUpdatedDate)
+                    }
+                } else {
+                    // 새로 저장할 경우 (앱 최초 실행 등)
+                    guard let entity = NSEntityDescription.entity(forEntityName: Currency.className, in: container.viewContext) else { continue }
+                    let newCurrency = NSManagedObject(entity: entity, insertInto: container.viewContext)
+                    newCurrency.setValue(code, forKey: Currency.Key.code)
+                    newCurrency.setValue(name, forKey: Currency.Key.name)
+                    newCurrency.setValue("0", forKey: Currency.Key.yesterday)
+                    newCurrency.setValue(String(format: "%.4f", rate), forKey: Currency.Key.rate)
+                    newCurrency.setValue(todayDateString, forKey: Currency.Key.lastUpdatedDate)
+                    newCurrency.setValue(false, forKey: Currency.Key.isBookmark)
+                }
+            }
+            try container.viewContext.save()
+        } catch {
+            print("Update Currency Data Error...: \(error)")
+        }
+    }
+    
+    private func makeCurrencyCellModels(from rates: [String: Double], query: String) -> [CurrencyCellModel] {
+        let all = rates.map { (key, value) in
+            let yesterdatRate = Double(Currency.Key.yesterday) ?? 0
+            let currentRate = value
+            let currencyStatus: CurrencyStatus? = abs(currentRate - yesterdatRate) > 0.01 ? (currentRate > yesterdatRate ? .up : .down) : nil
+            
+            return CurrencyCellModel(code: key,
+                                     name: CountryName.name[key] ?? "",
+                                     rate: String(format: "%.4f", value),
+                                     isBookmarked: bookMarkCodes.contains(key),
+                                     status: currencyStatus)
+        }
+        
+        let lowercased = query.lowercased()
+        let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
+        
+        return sortedModels(filtered)
     }
     
     private func sortedModels(_ items: [CurrencyCellModel]) -> [CurrencyCellModel] {
@@ -132,36 +180,41 @@ final class MainViewModel {
         }
     }
     
-    func createData(_ item: CurrencyCellModel) {
-        guard let entity = NSEntityDescription.entity(forEntityName: Currency.className, in: self.container.viewContext) else { return }
-        let newCurrency = NSManagedObject(entity: entity, insertInto: self.container.viewContext)
-        newCurrency.setValue(item.code, forKey: Currency.Key.code)
-        newCurrency.setValue(item.name, forKey: Currency.Key.name)
-        newCurrency.setValue(item.rate, forKey: Currency.Key.rate)
+    private func handleBookmarkToggle(at indexPath: IndexPath, in models: [CurrencyCellModel]) -> [CurrencyCellModel] {
+        var updateModels = models
+        let tappedModel = models[indexPath.row]
         
-        do {
-            try self.container.viewContext.save()
-            print("즐겨찾기 저장 성공!")
-        } catch {
-            print("즐겨찾기 저장 실패...")
+        let updatedBookmark = !tappedModel.isBookmarked
+        let updateModel = CurrencyCellModel(code: tappedModel.code,
+                                            name: tappedModel.name,
+                                            rate: tappedModel.rate,
+                                            isBookmarked: updatedBookmark,
+                                            status: tappedModel.status)
+        
+        if updatedBookmark {
+            updateData(updateModel)
+            bookMarkCodes.insert(updateModel.code)
+        } else {
+            updateData(updateModel)
+            bookMarkCodes.remove(updateModel.code)
         }
+        
+        updateModels[indexPath.row] = updateModel
+        return sortedModels(updateModels)
     }
     
-    func deleteData(_ item: CurrencyCellModel) {
+    func updateData(_ item: CurrencyCellModel) {
         let request = Currency.fetchRequest()
         request.predicate = NSPredicate(format: "code == %@", item.code)
         
         do {
-            let results = try container.viewContext.fetch(request)
-            
-            for object in results {
-                container.viewContext.delete(object)
+            if let result = try container.viewContext.fetch(request).first {
+                result.setValue(!result.isBookmark, forKey: Currency.Key.isBookmark)
             }
-            
             try container.viewContext.save()
-            print("즐겨찾기 삭제 성공!")
+            print("즐겨찾기 업데이트 성공!")
         } catch {
-            print("즐겨찾기 삭제 실패...")
+            print("즐겨찾기 업데이트 실패...")
         }
     }
     
@@ -172,12 +225,48 @@ final class MainViewModel {
             for currency in currencies as [NSManagedObject] {
                 if let code = currency.value(forKey: Currency.Key.code) as? String,
                    let name = currency.value(forKey: Currency.Key.name) as? String,
-                   let rate = currency.value(forKey: Currency.Key.rate) as? String {
-                    print("code: \(code), name: \(name), rate: \(rate)")
+                   let rate = currency.value(forKey: Currency.Key.rate) as? String,
+                   let yesterday = currency.value(forKey: Currency.Key.yesterday) as? String,
+                   let lastUpdatedDate = currency.value(forKey: Currency.Key.lastUpdatedDate) as? String,
+                   let isBookmarked = currency.value(forKey: Currency.Key.isBookmark) as? Bool {
+                    print("code: \(code), name: \(name), rate: \(rate), yesterday: \(yesterday), lastUpdatedDate: \(lastUpdatedDate), isBookmarked: \(isBookmarked)")
                 }
             }
         } catch {
             print("데이터 읽기 실패")
         }
     }
+    
+//    func createData(_ item: CurrencyCellModel) {
+//        guard let entity = NSEntityDescription.entity(forEntityName: Currency.className, in: self.container.viewContext) else { return }
+//        let newCurrency = NSManagedObject(entity: entity, insertInto: self.container.viewContext)
+//        newCurrency.setValue(item.code, forKey: Currency.Key.code)
+//        newCurrency.setValue(item.name, forKey: Currency.Key.name)
+//        newCurrency.setValue(item.rate, forKey: Currency.Key.rate)
+//        
+//        do {
+//            try self.container.viewContext.save()
+//            print("즐겨찾기 저장 성공!")
+//        } catch {
+//            print("즐겨찾기 저장 실패...")
+//        }
+//    }
+//    
+//    func deleteData(_ item: CurrencyCellModel) {
+//        let request = Currency.fetchRequest()
+//        request.predicate = NSPredicate(format: "code == %@", item.code)
+//        
+//        do {
+//            let results = try container.viewContext.fetch(request)
+//            
+//            for object in results {
+//                container.viewContext.delete(object)
+//            }
+//            
+//            try container.viewContext.save()
+//            print("즐겨찾기 삭제 성공!")
+//        } catch {
+//            print("즐겨찾기 삭제 실패...")
+//        }
+//    }
 }

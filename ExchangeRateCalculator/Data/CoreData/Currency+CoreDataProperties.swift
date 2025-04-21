@@ -2,7 +2,7 @@
 //  Currency+CoreDataProperties.swift
 //  ExchangeRateCalculator
 //
-//  Created by 백래훈 on 4/18/25.
+//  Created by 백래훈 on 4/21/25.
 //
 //
 
@@ -19,6 +19,9 @@ extension Currency {
     @NSManaged public var code: String?
     @NSManaged public var name: String?
     @NSManaged public var rate: String?
+    @NSManaged public var yesterday: String?
+    @NSManaged public var lastUpdatedDate: String?
+    @NSManaged public var isBookmark: Bool
 
 }
 
