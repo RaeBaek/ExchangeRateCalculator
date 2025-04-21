@@ -37,23 +37,12 @@ final class MainViewModel {
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         self.container = appDelegate.persistentContainer
         
-//        let description = container.persistentStoreDescriptions.first
-//        description?.shouldMigrateStoreAutomatically = true
-//        description?.shouldInferMappingModelAutomatically = true
-//        
-//        container.loadPersistentStores { storeDesciption, error in
-//            if let error {
-//                fatalError("Unresolved Error: \(error)")
-//            }
-//        }
-        
         // 초기화 시 호출
         loadBookmarks()
         readAllData()
-        
     }
     
-    // CoreData에 저장되어 있는 즐겨찾기 내용을 bookMarkCodes에 대입
+    // 즐겨찾기 상태인 통화를 bookMarkCodes에 추가
     private func loadBookmarks() {
         do {
             let currencies = try container.viewContext.fetch(Currency.fetchRequest())
@@ -236,37 +225,4 @@ final class MainViewModel {
             print("데이터 읽기 실패")
         }
     }
-    
-//    func createData(_ item: CurrencyCellModel) {
-//        guard let entity = NSEntityDescription.entity(forEntityName: Currency.className, in: self.container.viewContext) else { return }
-//        let newCurrency = NSManagedObject(entity: entity, insertInto: self.container.viewContext)
-//        newCurrency.setValue(item.code, forKey: Currency.Key.code)
-//        newCurrency.setValue(item.name, forKey: Currency.Key.name)
-//        newCurrency.setValue(item.rate, forKey: Currency.Key.rate)
-//        
-//        do {
-//            try self.container.viewContext.save()
-//            print("즐겨찾기 저장 성공!")
-//        } catch {
-//            print("즐겨찾기 저장 실패...")
-//        }
-//    }
-//    
-//    func deleteData(_ item: CurrencyCellModel) {
-//        let request = Currency.fetchRequest()
-//        request.predicate = NSPredicate(format: "code == %@", item.code)
-//        
-//        do {
-//            let results = try container.viewContext.fetch(request)
-//            
-//            for object in results {
-//                container.viewContext.delete(object)
-//            }
-//            
-//            try container.viewContext.save()
-//            print("즐겨찾기 삭제 성공!")
-//        } catch {
-//            print("즐겨찾기 삭제 실패...")
-//        }
-//    }
 }

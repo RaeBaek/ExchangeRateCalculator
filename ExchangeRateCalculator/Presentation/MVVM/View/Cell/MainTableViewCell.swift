@@ -130,6 +130,18 @@ final class MainTableViewCell: UITableViewCell {
             upDownImage.tintColor = .systemBlue
         case .none:
             upDownImage.image = nil
+            updateUIConstraints()
+        }
+    }
+    
+    private func updateUIConstraints() {
+        upDownImage.snp.removeConstraints()
+        
+        exchangeRateLabel.snp.updateConstraints {
+            $0.trailing.equalTo(bookmarkButton.snp.leading).offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.leading.lessThanOrEqualTo(labelStackView.snp.trailing).offset(16)
+            $0.width.equalTo(120)
         }
     }
     
