@@ -55,6 +55,26 @@ final class MainViewModel {
         }
     }
     
+    func savedCurrentView() {
+        do {
+            let current = try container.viewContext.fetch(SaveView.fetchRequest())
+            
+            if let currentValue = current.first {
+                currentValue.setValue("Main", forKey: SaveView.Key.isLastView)
+                currentValue.setValue(nil, forKey: SaveView.Key.code)
+            } else {
+                guard let entity = NSEntityDescription.entity(forEntityName: SaveView.className, in: container.viewContext) else { return }
+                let newCurrency = NSManagedObject(entity: entity, insertInto: container.viewContext)
+                newCurrency.setValue("Main", forKey: SaveView.Key.isLastView)
+                newCurrency.setValue(nil, forKey: SaveView.Key.code)
+            }
+            try container.viewContext.save()
+            print("Save View 저장 완료! (Main)")
+        } catch {
+            print("Save View 저장 실패...")
+        }
+    }
+    
     func transform(input: Input) -> Output {
         let rates = PublishRelay<ExchangeRate>()
         let errorMessage = PublishRelay<String>()
@@ -143,10 +163,20 @@ final class MainViewModel {
     
     private func makeCurrencyCellModels(from rates: [String: Double], query: String) -> [CurrencyCellModel] {
         let all = rates.map { (key, value) in
-            let yesterdatRate = Double(Currency.Key.yesterday) ?? 0
-            let currentRate = value
-            let currencyStatus: CurrencyStatus? = abs(currentRate - yesterdatRate) > 0.01 ? (currentRate > yesterdatRate ? .up : .down) : nil
+            var currencyStatus: CurrencyStatus?
             
+            let request = Currency.fetchRequest()
+            request.predicate = NSPredicate(format: "code == %@", key)
+            
+            do {
+                if let result = try container.viewContext.fetch(request).first {
+                    let yesterdatRate = Double(result.yesterday ?? "") ?? 0
+                    let currentRate = value
+                    currencyStatus = abs(currentRate - yesterdatRate) > 0.01 ? (currentRate > yesterdatRate ? .up : .down) : nil
+                }
+            } catch {
+                print("Currency: \(key) 값 없음...")
+            }
             return CurrencyCellModel(code: key,
                                      name: CountryName.name[key] ?? "",
                                      rate: String(format: "%.4f", value),
@@ -158,15 +188,6 @@ final class MainViewModel {
         let filtered = all.filter { $0.code.lowercased().hasPrefix(lowercased) || $0.name.hasPrefix(query) }
         
         return sortedModels(filtered)
-    }
-    
-    private func sortedModels(_ items: [CurrencyCellModel]) -> [CurrencyCellModel] {
-        items.sorted {
-            if $0.isBookmarked != $1.isBookmarked {
-                return $0.isBookmarked && !$1.isBookmarked
-            }
-            return $0.code < $1.code
-        }
     }
     
     private func handleBookmarkToggle(at indexPath: IndexPath, in models: [CurrencyCellModel]) -> [CurrencyCellModel] {
@@ -192,7 +213,16 @@ final class MainViewModel {
         return sortedModels(updateModels)
     }
     
-    func updateData(_ item: CurrencyCellModel) {
+    private func sortedModels(_ items: [CurrencyCellModel]) -> [CurrencyCellModel] {
+        items.sorted {
+            if $0.isBookmarked != $1.isBookmarked {
+                return $0.isBookmarked && !$1.isBookmarked
+            }
+            return $0.code < $1.code
+        }
+    }
+    
+    private func updateData(_ item: CurrencyCellModel) {
         let request = Currency.fetchRequest()
         request.predicate = NSPredicate(format: "code == %@", item.code)
         
@@ -207,7 +237,7 @@ final class MainViewModel {
         }
     }
     
-    func readAllData() {
+    private func readAllData() {
         do {
             let currencies = try container.viewContext.fetch(Currency.fetchRequest())
             
@@ -222,7 +252,7 @@ final class MainViewModel {
                 }
             }
         } catch {
-            print("데이터 읽기 실패")
+            print("Currency 데이터 읽기 실패...")
         }
     }
 }

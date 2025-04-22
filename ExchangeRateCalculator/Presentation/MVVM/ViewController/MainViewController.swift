@@ -42,6 +42,12 @@ final class MainViewController: BaseViewController {
         bind()
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        mainViewModel.savedCurrentView()
+    }
+    
     override func bind() {
         super.bind()
         
@@ -84,7 +90,7 @@ final class MainViewController: BaseViewController {
         
         mainView.tableView.rx.modelSelected(CurrencyCellModel.self)
             .bind(with: self) { owner, model in
-                owner.navigationController?.pushViewController(ExchageRateCalculatorViewController(currencyModel: model), animated: true)
+                owner.navigationController?.pushViewController(ExchangeRateCalculatorViewController(viewModel: ExchangeRateCalculatorViewModel(currencyModel: model)), animated: true)
             }
             .disposed(by: disposeBag)
     }

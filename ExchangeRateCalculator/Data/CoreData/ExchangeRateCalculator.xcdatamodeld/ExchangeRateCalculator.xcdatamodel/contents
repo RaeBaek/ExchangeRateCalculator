@@ -8,4 +8,8 @@
         <attribute name="rate" optional="YES" attributeType="String"/>
         <attribute name="yesterday" optional="YES" attributeType="String"/>
     </entity>
+    <entity name="SaveView" representedClassName="SaveView" syncable="YES">
+        <attribute name="code" optional="YES" attributeType="String"/>
+        <attribute name="isLastView" optional="YES" attributeType="String"/>
+    </entity>
 </model>

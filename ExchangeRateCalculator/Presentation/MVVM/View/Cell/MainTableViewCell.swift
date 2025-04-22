@@ -75,6 +75,11 @@ final class MainTableViewCell: UITableViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
+        upDownImage.image = nil
+        
+        upDownImage.snp.removeConstraints()
+        exchangeRateLabel.snp.removeConstraints()
+        
         disposeBag = DisposeBag()
     }
     
@@ -99,20 +104,6 @@ final class MainTableViewCell: UITableViewCell {
             $0.centerY.equalToSuperview()
             $0.size.equalTo(30)
         }
-        
-        upDownImage.snp.makeConstraints {
-            $0.trailing.equalTo(bookmarkButton.snp.leading).offset(-16)
-            $0.centerY.equalToSuperview()
-            $0.size.equalTo(30)
-        }
-        
-        exchangeRateLabel.snp.makeConstraints {
-            $0.trailing.equalTo(upDownImage.snp.leading).offset(-16)
-            $0.centerY.equalToSuperview()
-            $0.leading.lessThanOrEqualTo(labelStackView.snp.trailing).offset(16)
-            $0.width.equalTo(120)
-        }
-        
     }
     
     func setCell(_ item: CurrencyCellModel) {
@@ -125,19 +116,19 @@ final class MainTableViewCell: UITableViewCell {
         case .up:
             upDownImage.image = UIImage(systemName: "arrowtriangle.up.square.fill")
             upDownImage.tintColor = .systemRed
+            setUpDownConstraints()
         case .down:
             upDownImage.image = UIImage(systemName: "arrowtriangle.down.square.fill")
             upDownImage.tintColor = .systemBlue
+            setUpDownConstraints()
         case .none:
             upDownImage.image = nil
-            updateUIConstraints()
+            setRateConstraints()
         }
     }
     
-    private func updateUIConstraints() {
-        upDownImage.snp.removeConstraints()
-        
-        exchangeRateLabel.snp.updateConstraints {
+    private func setRateConstraints() {
+        exchangeRateLabel.snp.makeConstraints {
             $0.trailing.equalTo(bookmarkButton.snp.leading).offset(-16)
             $0.centerY.equalToSuperview()
             $0.leading.lessThanOrEqualTo(labelStackView.snp.trailing).offset(16)
@@ -145,4 +136,18 @@ final class MainTableViewCell: UITableViewCell {
         }
     }
     
+    private func setUpDownConstraints() {
+        upDownImage.snp.makeConstraints {
+            $0.trailing.equalTo(bookmarkButton.snp.leading).offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.size.equalTo(30)
+        }
+        
+        exchangeRateLabel.snp.makeConstraints {
+            $0.trailing.equalTo(upDownImage.snp.leading).offset(-16)
+            $0.centerY.equalToSuperview()
+            $0.leading.lessThanOrEqualTo(labelStackView.snp.trailing).offset(16)
+            $0.width.equalTo(120)
+        }
+    }
 }

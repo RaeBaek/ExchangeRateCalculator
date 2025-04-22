@@ -12,16 +12,14 @@ import Then
 import RxSwift
 import RxCocoa
 
-final class ExchageRateCalculatorViewController: BaseViewController {
+final class ExchangeRateCalculatorViewController: BaseViewController {
     
     private let exchangeRateView = ExchangeRateView()
     
-    private let currencyModel: CurrencyCellModel
     private let viewModel: ExchangeRateCalculatorViewModel
     private let disposeBag = DisposeBag()
     
-    init(currencyModel: CurrencyCellModel, viewModel: ExchangeRateCalculatorViewModel = ExchangeRateCalculatorViewModel()) {
-        self.currencyModel = currencyModel
+    init(viewModel: ExchangeRateCalculatorViewModel) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -39,20 +37,28 @@ final class ExchageRateCalculatorViewController: BaseViewController {
         super.viewDidLoad()
         
         setNavigationBar(NavigationBarTitle.exchangeRate.rawValue)
-        exchangeRateView.setView(currencyModel)
-        
         bind()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        viewModel.savedCurrentView()
     }
     
     override func bind() {
         super.bind()
         
-        let input = ExchangeRateCalculatorViewModel.Input(currencyModel: BehaviorSubject(value: currencyModel),
-                                                          currencyValue: exchangeRateView.amountTextField.rx.text.orEmpty,
+        let input = ExchangeRateCalculatorViewModel.Input(currencyValue: exchangeRateView.amountTextField.rx.text.orEmpty,
                                                           convertButtonTapped: exchangeRateView.convertButton.rx.tap)
         let output = viewModel.transform(input: input)
         
-        output.exchageValue
+        output.currencyModel
+            .bind(with: self) { owner, model in
+                owner.exchangeRateView.setView(model)
+            }
+            .disposed(by: disposeBag)
+        
+        output.exchangeValue
             .bind(to: exchangeRateView.resultLabel.rx.text)
             .disposed(by: disposeBag)
         
