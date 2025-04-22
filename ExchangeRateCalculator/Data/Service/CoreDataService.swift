@@ -31,6 +31,26 @@ final class CoreDataService {
         }
     }
     
+    func saveCurrentView(view: String, code: String?) {
+        do {
+            let current = try fetchData(SaveView.fetchRequest())
+            
+            if let currentValue = current.first {
+                currentValue.setValue(view, forKey: SaveView.Key.isLastView)
+                currentValue.setValue(code, forKey: SaveView.Key.code)
+            } else {
+                guard let entity = NSEntityDescription.entity(forEntityName: SaveView.className, in: container.viewContext) else { return }
+                let newCurrency = NSManagedObject(entity: entity, insertInto: container.viewContext)
+                newCurrency.setValue(view, forKey: SaveView.Key.isLastView)
+                newCurrency.setValue(code, forKey: SaveView.Key.code)
+            }
+            saveContext()
+            print("Save View 저장 완료! (\(view))")
+        } catch {
+            print("Save View 저장 실패...")
+        }
+    }
+    
     func updateCurrency(with exchangeRate: ExchangeRate) {
         let todayDateString = exchangeRate.timeLastUpdateUtc.toDateOnlyString()
         let request = Currency.fetchRequest()

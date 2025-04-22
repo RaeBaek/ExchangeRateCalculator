@@ -42,7 +42,8 @@ final class ExchangeRateCalculatorViewController: BaseViewController {
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        viewModel.savedCurrentView()
+        
+        CoreDataService.shared.saveCurrentView(view: "ExchangeRateCalculator", code: viewModel.currencyModel.code)
     }
     
     override func bind() {

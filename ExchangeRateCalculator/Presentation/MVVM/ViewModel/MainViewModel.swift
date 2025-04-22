@@ -55,26 +55,26 @@ final class MainViewModel {
 //        }
 //    }
     
-    func savedCurrentView() {
-        do {
-//            let current = try container.viewContext.fetch(SaveView.fetchRequest())
-            let current = try CoreDataService.shared.fetchData(SaveView.fetchRequest())
-            
-            if let currentValue = current.first {
-                currentValue.setValue("Main", forKey: SaveView.Key.isLastView)
-                currentValue.setValue(nil, forKey: SaveView.Key.code)
-            } else {
-                guard let entity = NSEntityDescription.entity(forEntityName: SaveView.className, in: CoreDataService.shared.container.viewContext) else { return }
-                let newCurrency = NSManagedObject(entity: entity, insertInto: CoreDataService.shared.container.viewContext)
-                newCurrency.setValue("Main", forKey: SaveView.Key.isLastView)
-                newCurrency.setValue(nil, forKey: SaveView.Key.code)
-            }
-            CoreDataService.shared.saveContext()
-            print("Save View 저장 완료! (Main)")
-        } catch {
-            print("Save View 저장 실패...")
-        }
-    }
+//    func savedCurrentView() {
+//        do {
+////            let current = try container.viewContext.fetch(SaveView.fetchRequest())
+//            let current = try CoreDataService.shared.fetchData(SaveView.fetchRequest())
+//
+//            if let currentValue = current.first {
+//                currentValue.setValue("Main", forKey: SaveView.Key.isLastView)
+//                currentValue.setValue(nil, forKey: SaveView.Key.code)
+//            } else {
+//                guard let entity = NSEntityDescription.entity(forEntityName: SaveView.className, in: CoreDataService.shared.container.viewContext) else { return }
+//                let newCurrency = NSManagedObject(entity: entity, insertInto: CoreDataService.shared.container.viewContext)
+//                newCurrency.setValue("Main", forKey: SaveView.Key.isLastView)
+//                newCurrency.setValue(nil, forKey: SaveView.Key.code)
+//            }
+//            CoreDataService.shared.saveContext()
+//            print("Save View 저장 완료! (Main)")
+//        } catch {
+//            print("Save View 저장 실패...")
+//        }
+//    }
     
     func transform(input: Input) -> Output {
         let rates = PublishRelay<ExchangeRate>()

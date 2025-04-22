@@ -45,7 +45,7 @@ final class MainViewController: BaseViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        mainViewModel.savedCurrentView()
+        CoreDataService.shared.saveCurrentView(view: "Main", code: nil)
     }
     
     override func bind() {
