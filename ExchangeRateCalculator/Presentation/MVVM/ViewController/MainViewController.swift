@@ -21,7 +21,7 @@ final class MainViewController: BaseViewController {
     
     private let disposeBag = DisposeBag()
     
-    init(DIContainer: MainDIContainerInterface) {
+    init(DIContainer: DIContainerInterface) {
         self.mainViewModel = DIContainer.makeMainViewModel()
         super.init(nibName: nil, bundle: nil)
     }
@@ -45,7 +45,7 @@ final class MainViewController: BaseViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        CoreDataService.shared.saveCurrentView(view: "Main", code: nil)
+        mainViewModel.saveCurrentView(view: "Main")
     }
     
     override func bind() {
@@ -90,7 +90,7 @@ final class MainViewController: BaseViewController {
         
         mainView.tableView.rx.modelSelected(CurrencyCellModel.self)
             .bind(with: self) { owner, model in
-                owner.navigationController?.pushViewController(ExchangeRateCalculatorViewController(viewModel: ExchangeRateCalculatorViewModel(currencyModel: model)), animated: true)
+                owner.navigationController?.pushViewController(ExchangeRateCalculatorViewController(currencyModel: model, DIContainer: DIContainer()), animated: true)
             }
             .disposed(by: disposeBag)
     }

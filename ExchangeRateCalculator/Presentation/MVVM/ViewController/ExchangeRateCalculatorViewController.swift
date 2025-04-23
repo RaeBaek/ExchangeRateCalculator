@@ -19,8 +19,8 @@ final class ExchangeRateCalculatorViewController: BaseViewController {
     private let viewModel: ExchangeRateCalculatorViewModel
     private let disposeBag = DisposeBag()
     
-    init(viewModel: ExchangeRateCalculatorViewModel) {
-        self.viewModel = viewModel
+    init(currencyModel: CurrencyCellModel, DIContainer: DIContainerInterface) {
+        self.viewModel = DIContainer.makeExchangeRateCalculatorViewModel(currencyModel: currencyModel)
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -43,7 +43,7 @@ final class ExchangeRateCalculatorViewController: BaseViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        CoreDataService.shared.saveCurrentView(view: "ExchangeRateCalculator", code: viewModel.currencyModel.code)
+        viewModel.saveVurrentView(view: "ExchangeRateCalculator")
     }
     
     override func bind() {
