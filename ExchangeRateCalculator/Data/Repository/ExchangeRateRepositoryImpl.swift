@@ -9,7 +9,7 @@ import Foundation
 
 import RxSwift
 
-final class ExchangeRateRepository: ExchangeRateRepositoryInterface {
+final class ExchangeRateRepositoryImpl: ExchangeRateRepository {
     
     private let service = ExchangeRateAPIService()
     
@@ -19,7 +19,7 @@ final class ExchangeRateRepository: ExchangeRateRepositoryInterface {
         return dto.toDomain()
     }
     
-    func rxFetchExchageRateData() -> Observable<ExchageRateResponseDTO> {
+    func rxFetchExchageRateData() -> Single<ExchangeRateResult> {
         return service.rxFetchExchageRates()
     }
 }

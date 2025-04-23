@@ -1,5 +1,5 @@
 //
-//  ExchangeRateUseCase.swift
+//  ExchangeRateUseCaseImpl.swift
 //  ExchangeRateCalculator
 //
 //  Created by 백래훈 on 4/15/25.
@@ -9,11 +9,11 @@ import Foundation
 
 import RxSwift
 
-final class ExchangeRateUseCase: ExchangeRateUseCaseInterface {
+final class ExchangeRateUseCaseImpl: ExchangeRateUseCase {
     
-    private let repository: ExchangeRateRepositoryInterface
+    private let repository: ExchangeRateRepository
     
-    init(repository: ExchangeRateRepositoryInterface) {
+    init(repository: ExchangeRateRepository) {
         self.repository = repository
     }
     
@@ -21,7 +21,7 @@ final class ExchangeRateUseCase: ExchangeRateUseCaseInterface {
         return try await repository.fetchExchageRateData()
     }
     
-    func rxFetchExchangeRateData() -> RxSwift.Observable<ExchageRateResponseDTO> {
+    func rxFetchExchangeRateData() -> Single<ExchangeRateResult> {
         return repository.rxFetchExchageRateData()
     }
 }

@@ -14,28 +14,37 @@ final class ExchangeRateAPIService {
     
     func fetchExchageRates() async throws -> ExchageRateResponseDTO {
         guard let url = URL(string: urlString) else {
-            throw URLError(.badURL)
+            throw NetworkError.invalidURL
         }
         
         let (data, response) = try await URLSession.shared.data(from: url)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200..<300).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidStatusCode(-1)
         }
         
-        return try JSONDecoder().decode(ExchageRateResponseDTO.self, from: data)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw NetworkError.invalidStatusCode(httpResponse.statusCode)
+        }
+        
+        do {
+            return try JSONDecoder().decode(ExchageRateResponseDTO.self, from: data)
+        } catch {
+            throw NetworkError.decodingError(error)
+        }
     }
     
-    func rxFetchExchageRates() -> Observable<ExchageRateResponseDTO> {
-        return Observable.create { observer in
+    func rxFetchExchageRates() -> Single<ExchangeRateResult> {
+        return Single.create { single in
             Task {
                 do {
                     let dto = try await self.fetchExchageRates()
-                    observer.onNext(dto)
-                    observer.onCompleted()
+                    single(.success(.success(dto)))
+                } catch let error as NetworkError {
+                    single(.success(.failure(error)))
                 } catch {
-                    observer.onError(error)
+                    single(.success(.failure(.unknown(error))))
                 }
             }
             return Disposables.create()
