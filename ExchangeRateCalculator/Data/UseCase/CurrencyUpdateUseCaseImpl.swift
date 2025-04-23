@@ -8,9 +8,9 @@
 import Foundation
 
 final class CurrencyUpdateUseCaseImpl: CurrencyUpdateUseCase {
-    private let repository: CurrencyRepository
+    private let repository: CoreDataRepository
     
-    init(repository: CurrencyRepository) {
+    init(repository: CoreDataRepository) {
         self.repository = repository
     }
 

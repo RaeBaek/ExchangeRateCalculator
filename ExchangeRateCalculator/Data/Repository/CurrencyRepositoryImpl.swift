@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class CurrencyRepositoryImpl: CurrencyRepository {
+final class CurrencyRepositoryImpl: CoreDataRepository {
     private let coreDataService = CoreDataService.shared
     
     func updateCurrency(with exchangeRate: ExchangeRate) {
