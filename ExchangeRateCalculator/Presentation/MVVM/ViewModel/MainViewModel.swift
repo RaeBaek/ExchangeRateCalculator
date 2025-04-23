@@ -29,15 +29,18 @@ final class MainViewModel {
     private let exchangeRateUseCase: ExchangeRateUseCase
     private let bookmarkUseCase: BookmarkUseCase
     private let currentViewSaveUseCase: CurrentViewSaveUseCase
+    private let currencyUpdateUseCase: CurrencyUpdateUseCase
     
     private let disposeBag = DisposeBag()
     
     init(exchangeRateUseCase: ExchangeRateUseCase,
          bookmarkUseCase: BookmarkUseCase,
-         currentViewSaveUseCase: CurrentViewSaveUseCase) {
+         currentViewSaveUseCase: CurrentViewSaveUseCase,
+         currencyUpdateUseCase: CurrencyUpdateUseCase) {
         self.exchangeRateUseCase = exchangeRateUseCase
         self.bookmarkUseCase = bookmarkUseCase
         self.currentViewSaveUseCase = currentViewSaveUseCase
+        self.currencyUpdateUseCase = currencyUpdateUseCase
         
         // 초기화 시 호출
         bookMarkCodes = bookmarkUseCase.loadBookmarkeCodes()
@@ -53,18 +56,18 @@ final class MainViewModel {
             .withUnretained(self)
             .flatMapLatest { owner, _ in
                 owner.exchangeRateUseCase.rxFetchExchangeRateData()
-                    .catch { error in
-                        errorMessage.accept(error.localizedDescription)
-                        return .empty()
-                    }
             }
-            .map { $0.toDomain() }
             .withUnretained(self)
-            .do { owner, exchangeRate in
-                CoreDataService.shared.updateCurrency(with: exchangeRate)
+            .subscribe { owner, result in
+                switch result {
+                case .success(let dto):
+                    let exchangeRate = dto.toDomain()
+                    owner.currencyUpdateUseCase.updateCurrencyData(with: exchangeRate)
+                    rates.accept(exchangeRate)
+                case .failure(let error):
+                    errorMessage.accept(error.localizedDescription)
+                }
             }
-            .map { $0.1 }
-            .bind(to: rates)
             .disposed(by: disposeBag)
         
         // 검색 필터링을 위한 Observable.combineLatest

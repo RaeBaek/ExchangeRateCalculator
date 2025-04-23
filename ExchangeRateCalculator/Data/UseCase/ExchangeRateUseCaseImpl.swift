@@ -21,7 +21,7 @@ final class ExchangeRateUseCaseImpl: ExchangeRateUseCase {
         return try await repository.fetchExchageRateData()
     }
     
-    func rxFetchExchangeRateData() -> Observable<ExchageRateResponseDTO> {
+    func rxFetchExchangeRateData() -> Single<ExchangeRateResult> {
         return repository.rxFetchExchageRateData()
     }
 }

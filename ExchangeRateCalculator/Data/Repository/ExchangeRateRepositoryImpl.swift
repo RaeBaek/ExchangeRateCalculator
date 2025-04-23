@@ -19,7 +19,7 @@ final class ExchangeRateRepositoryImpl: ExchangeRateRepository {
         return dto.toDomain()
     }
     
-    func rxFetchExchageRateData() -> Observable<ExchageRateResponseDTO> {
+    func rxFetchExchageRateData() -> Single<ExchangeRateResult> {
         return service.rxFetchExchageRates()
     }
 }

@@ -16,10 +16,12 @@ final class DIContainer: DIContainerInterface {
         let currencyRepository = CurrencyRepositoryImpl()
         let bookmarkUseCase = BookmarkUseCaseImpl(repository: currencyRepository)
         let currentViewSaveUseCase = CurrentViewSaveUseCaseImpl(repository: currencyRepository)
+        let currencyUpdateUseCase = CurrencyUpdateUseCaseImpl(repository: currencyRepository)
         
         let viewModel = MainViewModel(exchangeRateUseCase: exchangeRateUseCase,
                                       bookmarkUseCase: bookmarkUseCase,
-                                      currentViewSaveUseCase: currentViewSaveUseCase)
+                                      currentViewSaveUseCase: currentViewSaveUseCase,
+                                      currencyUpdateUseCase: currencyUpdateUseCase)
         return viewModel
     }
     

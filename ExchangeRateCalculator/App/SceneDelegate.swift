@@ -64,7 +64,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                     // DispatchQueue.main.async 구문 내에서 push 하지 않으면 계산기 화면에서
                     // 네비게이션 back title이 'back'으로 표시. view를 그리는 시점의 차이에서 문제 발생.
                     DispatchQueue.main.async {
-                        navigationController.pushViewController(ExchangeRateCalculatorViewController(currencyModel: currencyModel, DIContainer: DIContainer()), animated: true)
+                        navigationController.pushViewController(ExchangeRateCalculatorViewController(currencyModel: currencyModel, DIContainer: DIContainer), animated: true)
                     }
                 } else {
                     print("Currency 값 없음...")
