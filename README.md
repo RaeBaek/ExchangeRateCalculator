@@ -113,34 +113,34 @@ ExchangeRateCalculator
 1. **.withUnretained(self)**
 ```
 input.viewDidLoad
-            .withUnretained(self)
-            .flatMapLatest { owner, _ in
-                owner.exchangeRateUseCase.rxFetchExchangeRateData()
-            }
-            .withUnretained(self)
-            .subscribe { owner, result in
-                switch result {
-                case .success(let dto):
-                    let exchangeRate = dto.toDomain()
-                    owner.currencyUpdateUseCase.updateCurrencyData(with: exchangeRate)
-                    rates.accept(exchangeRate)
-                case .failure(let error):
-                    errorMessage.accept(error.localizedDescription)
-                }
-            }
-            .disposed(by: disposeBag)
+    .withUnretained(self)
+    .flatMapLatest { owner, _ in
+        owner.exchangeRateUseCase.rxFetchExchangeRateData()
+    }
+    .withUnretained(self)
+    .subscribe { owner, result in
+        switch result {
+        case .success(let dto):
+            let exchangeRate = dto.toDomain()
+            owner.currencyUpdateUseCase.updateCurrencyData(with: exchangeRate)
+            rates.accept(exchangeRate)
+        case .failure(let error):
+            errorMessage.accept(error.localizedDescription)
+        }
+    }
+    .disposed(by: disposeBag)
 ```
 2. **.subscribe(with: self)**
 ```
 input.bookmarkButtonTapped
-            .withLatestFrom(filteredRates) { indexPath, models in
-                return (indexPath, models)
-            }
-            .subscribe(with: self) { owner, pair in
-                let (indexPath, models) = pair
-                filteredRates.accept(owner.handleBookmarkToggle(at: indexPath, in: models))
-            }
-            .disposed(by: disposeBag)
+    .withLatestFrom(filteredRates) { indexPath, models in
+        return (indexPath, models)
+    }
+    .subscribe(with: self) { owner, pair in
+        let (indexPath, models) = pair
+        filteredRates.accept(owner.handleBookmarkToggle(at: indexPath, in: models))
+    }
+    .disposed(by: disposeBag)
 ```
 ### ✅ 경험 결과
 - Instruments의 Leaks 도구를 통해 실행 중 메모리 릭 발생 여부를 점검한 결과, 누수 없음 확인
