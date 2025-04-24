@@ -65,7 +65,7 @@ final class ExchangeRateCalculatorViewController: BaseViewController {
         
         output.convertError
             .bind(with: self) { owner, _ in
-                owner.showAlert()
+                owner.showAlert("숫자만 입력해주세요.")
             }
             .disposed(by: disposeBag)
     }

@@ -77,8 +77,8 @@ final class MainViewController: BaseViewController {
         
         output.errorMessage
             .asDriver(onErrorJustReturn: "에러")
-            .drive { message in
-                
+            .drive(with: self) { owner, message in
+                owner.showAlert("데이터를 불러올 수 없습니다.\n\(message)")
             }
             .disposed(by: disposeBag)
         
